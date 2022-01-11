@@ -84,7 +84,9 @@ class vkMusicDownloader():
                 else :
                     self.log("{} Скачивается: {}.".format(index, fileMP3))
 
-                    os.system("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
+                    cmd = "ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3)
+                    self.log(cmd)
+                    os.system(cmd)
             except OSError:
                 if not os.path.isfile(fileMP3) :
                     self.log("{} Не удалось скачать аудиозапись: {}".format(index, fileMP3))
