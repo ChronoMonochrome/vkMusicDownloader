@@ -63,6 +63,21 @@ class vkMusicDownloader():
         except KeyboardInterrupt:
             print('Вы завершили выполнение программы.')
 
+    def downloadTracks(self, tracks):
+        for index, track in enumerate(tracks, start = 1):
+            fileMP3 = "{} - {}.mp3".format(track["artist"], track["title"])
+            fileMP3 = re.sub('/', '_', fileMP3)
+            try:
+                if os.path.isfile(fileMP3) :
+                    print("{} Уже скачен: {}.".format(index, fileMP3))
+                else :
+                    print("{} Скачивается: {}.".format(index, fileMP3), end = "")
+
+                    os.system("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
+            except OSError:
+                if not os.path.isfile(fileMP3) :
+                    print("{} Не удалось скачать аудиозапись: {}".format(index, fileMP3))
+
     def main(self, auth_dialog = 'yes'):
         try:
             if (not os.path.exists(self.CONFIG_DIR)):
@@ -89,69 +104,38 @@ class vkMusicDownloader():
             music_path = "{}/{} {}".format(self.path, info[0]['first_name'], info[0]['last_name'])
             if not os.path.exists(music_path):
                 os.makedirs(music_path)
-            
-            index = 1
+
             time_start = time() # сохраняем время начала скачивания
             print("Скачивание началось...\n")
             
             os.chdir(music_path) #меняем текущую директорию
-            audio = self.vk_audio.get(owner_id=self.user_id)
-            print('Будет скачано: {} аудиозаписей с Вашей страницы.'.format(len(audio)))
+            tracks = self.vk_audio.get(owner_id=self.user_id)
+            print('Будет скачано: {} аудиозаписей с Вашей страницы.'.format(len(tracks)))
             
             # собственно циклом загружаем нашу музыку 
-            for i in audio:
-                fileMP3 = "{} - {}.mp3".format(i["artist"], i["title"])
-                fileMP3 = re.sub('/', '_', fileMP3)
-                
-                try:
-                    if os.path.isfile(fileMP3) :
-                        print("{} Уже скачен: {}.".format(index, fileMP3))
-                    else :
-                        print("{} Скачивается: {}.".format(index, fileMP3), end = "\n")
-                    
-                        os.system("ffmpeg -i {} -c copy -map a \"{}\"".format(audio[index-1]['url'], fileMP3))
-                except OSError:
-                    if not os.path.isfile(fileMP3) :
-                        print("{} Не удалось скачать аудиозапись: {}".format(index, fileMP3))
+            self.downloadTracks(tracks)
 
-                index += 1
-            
             os.chdir("../..")
             albums = self.vk_audio.get_albums(owner_id=self.user_id)
             print('У Вас {} альбома.'.format(len(albums)))
-            for i in albums:
-                index = 1
-                audio = self.vk_audio.get(owner_id=self.user_id, album_id=i['id'])
+            for album in albums:
+                tracks = self.vk_audio.get(owner_id=self.user_id, album_id=album['id'])
                 
-                print('Будет скачано: {} аудиозаписей из альбома {}.'.format(len(audio), i['title']))
+                print('Будет скачано: {} аудиозаписей из альбома {}.'.format(len(tracks), album['title']))
                 
-                album_path = "{}/{}".format(music_path, i['title'])
+                album_path = "{}/{}".format(music_path, album['title'])
                 print(album_path)
                 if not os.path.exists(album_path):
                     os.makedirs(album_path)
                     
                 os.chdir(album_path) #меняем текущую директорию
                 
-                for j in audio:
-                    fileMP3 = "{} - {}.mp3".format(j["artist"], j["title"])
-                    fileMP3 = re.sub('/', '_', fileMP3)
-                    try:
-                        if os.path.isfile(fileMP3) :
-                            print("{} Уже скачен: {}.".format(index, fileMP3))
-                        else :
-                            print("{} Скачивается: {}.".format(index, fileMP3), end = "")
-                            
-                            os.system("ffmpeg -i {} -c copy -map a \"{}\"".format(audio[index-1]['url'], fileMP3))
-                    except OSError:
-                        if not os.path.isfile(fileMP3) :
-                            print("{} Не удалось скачать аудиозапись: {}".format(index, fileMP3))
-                
-                    index += 1
+                self.downloadTracks(tracks)
                 
                 os.chdir("../../..")
                 
             time_finish = time()
-            print("" + str(len(audio)) + " аудиозаписей скачано за: " + str(time_finish - time_start) + " сек.")
+            print("" + str(len(tracks)) + " аудиозаписей скачано за: " + str(time_finish - time_start) + " сек.")
         except KeyboardInterrupt:
             print('Вы завершили выполнение программы.')
 
