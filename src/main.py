@@ -14,9 +14,9 @@ from vk_api import audio
 
 class vkMusicDownloader():
     CONFIG_DIR = "config"
-    USERDATA_FILE = "{}/UserData.datab".format(CONFIG_DIR) #файл хранит логин, пароль и id
+    USERDATA_FILE = "{}/UserData.datab".format(CONFIG_DIR) # file contains a login, password and id
     REQUEST_STATUS_CODE = 200
-    path = 'music/'
+    path = "music/"
 
     def __init__(self):
         self.logger = open("log.txt", "wb+")
@@ -30,7 +30,7 @@ class vkMusicDownloader():
         self.logger.close()
 
     def auth_handler(self, remember_device=None):
-        code = input("Введите код подтверждения\n> ")
+        code = input("Enter confirmation code\n> ")
         if (remember_device == None):
             remember_device = True
         return code, remember_device
@@ -38,13 +38,13 @@ class vkMusicDownloader():
     def saveUserData(self):
         SaveData = [self.login, self.password, self.user_id]
 
-        with open(self.USERDATA_FILE, 'wb') as dataFile:
+        with open(self.USERDATA_FILE, "wb") as dataFile:
             pickle.dump(SaveData, dataFile)
 
     def auth(self, new=False):
         try:
             if (os.path.exists(self.USERDATA_FILE) and new == False):
-                with open(self.USERDATA_FILE, 'rb') as DataFile:
+                with open(self.USERDATA_FILE, "rb") as DataFile:
                     LoadedData = pickle.load(DataFile)
 
                 self.login = LoadedData[0]
@@ -54,13 +54,13 @@ class vkMusicDownloader():
                 if (os.path.exists(self.USERDATA_FILE) and new == True):
                     os.remove(self.USERDATA_FILE)
 
-                self.login = str(input("Введите логин\n> ")) 
-                self.password = str(input("Введите пароль\n> ")) 
-                self.user_id = str(input("Введите id профиля\n> "))
+                self.login = str(input("Enter login\n> "))
+                self.password = str(input("Enter password\n> "))
+                self.user_id = str(input("Enter profile id\n> "))
                 self.saveUserData()
 
             SaveData = [self.login, self.password, self.user_id]
-            with open(self.USERDATA_FILE, 'wb') as dataFile:
+            with open(self.USERDATA_FILE, "wb") as dataFile:
                 pickle.dump(SaveData, dataFile)
 
             vk_session = vk_api.VkApi(login=self.login, password=self.password)
@@ -69,11 +69,11 @@ class vkMusicDownloader():
             except:
                 vk_session = vk_api.VkApi(login=self.login, password=self.password, auth_handler=self.auth_handler)
                 vk_session.auth()
-            self.log('Вы успешно авторизовались.')
+            self.log("You've been successfully authorized.")
             self.vk = vk_session.get_api()
             self.vk_audio = audio.VkAudio(vk_session)
         except KeyboardInterrupt:
-            self.log('Вы завершили выполнение программы.')
+            self.log("Quitting...")
 
     async def downloadTrack(self, trackId):
         # собственно загружаем нашу музыку
@@ -86,23 +86,23 @@ class vkMusicDownloader():
 
         try:
             if os.path.isfile(fileMP3) :
-                self.log("{} Уже скачен: {}.".format(trackId, fileMP3))
+                self.log("{} Already downloaded: {}.".format(trackId, fileMP3))
             else :
-                self.log("{} Скачивается: {}.".format(trackId, fileMP3))
+                self.log("{} File is being downloaded: {}.".format(trackId, fileMP3))
                 coverUrl = ""
                 if "track_covers" in track:
                     coverUrl = track["track_covers"][-1]
 
                 if not coverUrl:
                     self.log("{} Couldn't find a cover image for track: {}".format(trackId, fileMP3))
-                    cmd = ["ffmpeg", "-i", track['url'], "-c", "copy", "-map", "0:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
+                    cmd = ["ffmpeg", "-i", track["url"], "-c", "copy", "-map", "0:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
                 else:
-                    cmd = ["ffmpeg", "-i", track['url'], "-i", coverUrl, "-c", "copy", "-map", "0:0", "-map", "1:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
+                    cmd = ["ffmpeg", "-i", track["url"], "-i", coverUrl, "-c", "copy", "-map", "0:0", "-map", "1:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
                 self.log(" ".join(cmd))
                 proc = await asyncio.create_subprocess_exec(*cmd)
         except OSError:
             if not os.path.isfile(fileMP3) :
-                self.log("{} Не удалось скачать аудиозапись: {}".format(trackId, fileMP3))
+                self.log("{} Couldn't download a track: {}".format(trackId, fileMP3))
 
         self.log("[%d / %d] %s" % (trackId + 1, len(self.tracks), fileMP3))
         return proc
@@ -123,82 +123,81 @@ class vkMusicDownloader():
     async def awaitProc(self, proc):
         await proc.wait()
 
-    async def main(self, auth_dialog = 'yes'):
+    async def main(self, auth_dialog = "yes"):
         try:
             if (not os.path.exists(self.CONFIG_DIR)):
                 os.mkdir(self.CONFIG_DIR)
             if not os.path.exists(self.path):
                 os.makedirs(self.path)
-            
-            if (auth_dialog == 'yes') :
-                auth_dialog = str(input("Авторизоваться заново? yes/no\n> "))
+
+            if (auth_dialog == "yes") :
+                auth_dialog = str(input("Authorize again? yes/no\n> "))
                 if (auth_dialog == "yes"):
                     self.auth(new=True)
                 elif (auth_dialog == "no"):
                     self.auth(new=False)
                 else:
-                    self.log('Ошибка, неверный ответ.')
+                    self.log("Error, incorrect response.")
                     self.main()
-            elif (auth_dialog == 'no') :
+            elif (auth_dialog == "no") :
                 self.auth(new=False)
-            
-            self.log('Подготовка к скачиванию...')
-            
-            # В папке music создаем папку с именем пользователя, которого скачиваем.
+
+            self.log("Preparing to download...")
+
             info = self.vk.users.get(user_id=self.user_id)
-            music_path = "{}/{} {}".format(self.path, info[0]['first_name'], info[0]['last_name'])
+            music_path = "{}/{} {}".format(self.path, info[0]["first_name"], info[0]["last_name"])
             if not os.path.exists(music_path):
                 os.makedirs(music_path)
 
-            time_start = time() # сохраняем время начала скачивания
-            self.log("Скачивание началось...\n")
-            
-            os.chdir(music_path) #меняем текущую директорию
+            time_start = time()
+            self.log("Downloading...\n")
+
+            os.chdir(music_path)
             self.tracks = self.vk_audio.get(owner_id=self.user_id)
-            self.log('Будет скачано: {} аудиозаписей с Вашей страницы.'.format(len(self.tracks)))
+            self.log("App will attempt to download {} tracks from your profile page.".format(len(self.tracks)))
             await self.downloadTracks(numThreads = 4)
 
             os.chdir("../..")
             albums = self.vk_audio.get_albums(owner_id=self.user_id)
-            self.log('У Вас {} альбома.'.format(len(albums)))
+            self.log("You have {} albums.".format(len(albums)))
             for album in albums:
-                self.tracks = self.vk_audio.get(owner_id=self.user_id, album_id=album['id'])
-                
-                self.log('Будет скачано: {} аудиозаписей из альбома {}.'.format(len(self.tracks), album['title']))
-                
-                album_path = "{}/{}".format(music_path, album['title'])
+                self.tracks = self.vk_audio.get(owner_id=self.user_id, album_id=album["id"])
+
+                self.log("App will attempt to download: {} tracks from album {}.".format(len(self.tracks), album["title"]))
+
+                album_path = "{}/{}".format(music_path, album["title"])
                 self.log(album_path)
                 if not os.path.exists(album_path):
                     os.makedirs(album_path)
-                    
-                os.chdir(album_path) #меняем текущую директорию
-                
-                await self.downloadTracks(numThreads = 4)
-                
-                os.chdir("../../..")
-                
-            time_finish = time()
-            self.log("" + str(len(self.tracks)) + " аудиозаписей скачано за: " + str(time_finish - time_start) + " сек.")
-        except KeyboardInterrupt:
-            self.log('Вы завершили выполнение программы.')
 
-if __name__ == '__main__':
+                os.chdir(album_path)
+
+                await self.downloadTracks(numThreads = 4)
+
+                os.chdir("../../..")
+
+            time_finish = time()
+            self.log("" + str(len(self.tracks)) + " tracks downloaded in: " + str(time_finish - time_start) + " s.")
+        except KeyboardInterrupt:
+            self.log("Quitting...")
+
+if __name__ == "__main__":
     vkMD = vkMusicDownloader()
 
     try:
         opts, args = getopt.getopt(sys.argv, "hn")
     except getopt.GetoptError:
-        print('./main.py [-n] [-h]')
+        print("./main.py [-n] [-h]")
         sys.exit(2)
-    
+
     if len(args) == 1 :
-        asyncio.run(vkMD.main(auth_dialog = 'yes'))
+        asyncio.run(vkMD.main(auth_dialog = "yes"))
     else :
-        for arg in args:    
-            if arg == '-h':
-                print('./main.py [-n] [-h]')
+        for arg in args:
+            if arg == "-h":
+                print("./main.py [-n] [-h]")
                 sys.exit()
-            elif arg == '-n':
-                asyncio.run(vkMD.main(auth_dialog = 'no'))
+            elif arg == "-n":
+                asyncio.run(vkMD.main(auth_dialog = "no"))
 
 

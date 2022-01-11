@@ -1,55 +1,55 @@
-Скрипт **python3** для скачивания Вашей и не Вашей музыки из вконтакта.  
-Тестировал на **python 3.6.9**, под **Linux Mint 19.3**.
+**Python3** script to download music from Vkontakte social network.  
+The script was tested on **python 3.6.9** on **Linux Mint 19.3**.
 
-08.12.2021 Обновление:
-+ Скачивание музыки по **m3u8** ссылке.
+08.12.2021 Update:
++ Music download via **m3u8** URL.
 
-18.11.2020 Обновление:
-+ Обновлены зависимости библиотек
-+ Параметры запуска программы, **./main.py -n** не выводит заново запрос на авторизацию (используется после успешной авторизации).
+18.11.2020 Update:
++ Updated dependencies
++ Added program parameter, **./main.py -n** not to authorize over again (can be used after a successful authorization).
 
-10.10.2019 Обновление:
-+ Добавлено скачивание музыки из альбомов.
+10.10.2019 Update:
++ Added albums download.
 
-### Как использовать:
+### How to use:
 
 ```bash
 apt-get install ffmpeg
 pip3 install -r requirements.txt
 ./src/main.py
 ```
-При 1-ом запуске скрипт попросит Вас авторизоваться:
+On a first run script will ask you to authorize:
 ```bash
-Авторизоваться заново? yes/no
+Authorize again? yes/no
 > yes
 ```
-Далее попросит ввести логин под которым мы будем авторизироваться:
+Then will ask a login we'll be using to authorize:
 ```bash
-Введите логин
+Enter login
 > my_login 
 ```
-Далее введите пароль:
+Then enter a password:
 ```bash
-Введите пароль
+Enter password
 > 
 ```
-Далее необходимо ввести id пользователя/группы музыку которого мы хотим скачать:
+Then enter profile/group ID which music we want to download from:
 ```bash
-Введите id профиля
+Enter profile id
 > 
 ```
-Узнать id по имени можно например [здесь](http://regvk.com/id/)
+You can find an ID by the name, e.g. [here](http://regvk.com/id/)
 
-Если все было сделано успешно, то Вы увидите примерно следующее:
+If everything was done correctly, you should see something like this:
 ```bash
-Вы успешно авторизовались.
-Подготовка к скачиванию...
-Будет скачано: 113 аудиозаписей.
-Скачивание началось...
+You've been successfully authorized.
+Preparing to download...
+App will attempt to download 113 tracks from your profile page.
+Downloading...
 
-1 Уже скачен: Ленинград - i_$uss.mp3.
-2 Уже скачен: Chamdo - Tibetan Gorshay Dance.mp3.
+1 Already downloaded: Ленинград - i_$uss.mp3.
+2 Already downloaded: Chamdo - Tibetan Gorshay Dance.mp3.
 ...
-113 аудиозаписей скачано за: 6.139557838439941 сек.
+113 tracks downloaded in: 6.139557838439941 сек.
 
 ```
