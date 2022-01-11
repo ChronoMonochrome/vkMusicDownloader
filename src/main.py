@@ -4,6 +4,7 @@
 import re
 import os
 import sys
+import asyncio
 import getopt
 import pickle
 from time import time
@@ -11,7 +12,6 @@ import vk_api
 from vk_api import audio
 
 class vkMusicDownloader():
-
     CONFIG_DIR = "config"
     USERDATA_FILE = "{}/UserData.datab".format(CONFIG_DIR) #файл хранит логин, пароль и id
     REQUEST_STATUS_CODE = 200 
@@ -74,24 +74,48 @@ class vkMusicDownloader():
         except KeyboardInterrupt:
             self.log('Вы завершили выполнение программы.')
 
-    def downloadTracks(self, tracks):
-        for index, track in enumerate(tracks, start = 1):
-            fileMP3 = "{} - {}.mp3".format(track["artist"], track["title"])
-            fileMP3 = fileMP3.replace("/", "_").replace("*", "＊").replace("|", "।")
-            try:
-                if os.path.isfile(fileMP3) :
-                    self.log("{} Уже скачен: {}.".format(index, fileMP3))
-                else :
-                    self.log("{} Скачивается: {}.".format(index, fileMP3))
+    async def downloadTrack(self, trackId):
+        # собственно загружаем нашу музыку
+        if trackId >= len(self.tracks):
+            return
+        track = self.tracks[trackId]
+        fileMP3 = "{} - {}.mp3".format(track["artist"], track["title"])
+        fileMP3 = fileMP3.replace("/", "_").replace("*", "＊").replace("|", "।")
+        self.log("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
+        proc = None
 
-                    cmd = "ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3)
-                    self.log(cmd)
-                    os.system(cmd)
-            except OSError:
-                if not os.path.isfile(fileMP3) :
-                    self.log("{} Не удалось скачать аудиозапись: {}".format(index, fileMP3))
+        try:
+            if os.path.isfile(fileMP3) :
+                self.log("{} Уже скачен: {}.".format(trackId, fileMP3))
+            else :
+                self.log("{} Скачивается: {}.".format(trackId, fileMP3))
 
-    def main(self, auth_dialog = 'yes'):
+                self.log("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
+                proc = await asyncio.create_subprocess_exec("ffmpeg", "-i", track['url'], "-c", "copy", "-map", "a", fileMP3)
+        except OSError:
+            if not os.path.isfile(fileMP3) :
+                self.log("{} Не удалось скачать аудиозапись: {}".format(trackId, fileMP3))
+
+        self.log("[%d / %d] %s" % (trackId + 1, len(self.tracks), fileMP3))
+        return proc
+
+    async def downloadTracks(self, numThreads = 4):
+        start = 0
+        while start < len(self.tracks):
+            tasks = [asyncio.ensure_future(self.awaitProc(t)) for t in await self.runProcs(start, numThreads) if t]
+            if tasks:
+                await asyncio.wait(tasks)
+
+            start += numThreads
+
+    async def runProcs(self, start, numThreads):
+        tasks = [await self.downloadTrack(i) for i in range(start, start + numThreads)]
+        return tasks
+
+    async def awaitProc(self, proc):
+        await proc.wait()
+
+    async def main(self, auth_dialog = 'yes'):
         try:
             if (not os.path.exists(self.CONFIG_DIR)):
                 os.mkdir(self.CONFIG_DIR)
@@ -122,19 +146,17 @@ class vkMusicDownloader():
             self.log("Скачивание началось...\n")
             
             os.chdir(music_path) #меняем текущую директорию
-            tracks = self.vk_audio.get(owner_id=self.user_id)
-            self.log('Будет скачано: {} аудиозаписей с Вашей страницы.'.format(len(tracks)))
-            
-            # собственно циклом загружаем нашу музыку 
-            self.downloadTracks(tracks)
+            self.tracks = self.vk_audio.get(owner_id=self.user_id)
+            self.log('Будет скачано: {} аудиозаписей с Вашей страницы.'.format(len(self.tracks)))
+            await self.downloadTracks(numThreads = 4)
 
             os.chdir("../..")
             albums = self.vk_audio.get_albums(owner_id=self.user_id)
             self.log('У Вас {} альбома.'.format(len(albums)))
             for album in albums:
-                tracks = self.vk_audio.get(owner_id=self.user_id, album_id=album['id'])
+                self.tracks = self.vk_audio.get(owner_id=self.user_id, album_id=album['id'])
                 
-                self.log('Будет скачано: {} аудиозаписей из альбома {}.'.format(len(tracks), album['title']))
+                self.log('Будет скачано: {} аудиозаписей из альбома {}.'.format(len(self.tracks), album['title']))
                 
                 album_path = "{}/{}".format(music_path, album['title'])
                 self.log(album_path)
@@ -143,12 +165,12 @@ class vkMusicDownloader():
                     
                 os.chdir(album_path) #меняем текущую директорию
                 
-                self.downloadTracks(tracks)
+                await self.downloadTracks(numThreads = 4)
                 
                 os.chdir("../../..")
                 
             time_finish = time()
-            self.log("" + str(len(tracks)) + " аудиозаписей скачано за: " + str(time_finish - time_start) + " сек.")
+            self.log("" + str(len(self.tracks)) + " аудиозаписей скачано за: " + str(time_finish - time_start) + " сек.")
         except KeyboardInterrupt:
             self.log('Вы завершили выполнение программы.')
 
@@ -162,13 +184,13 @@ if __name__ == '__main__':
         sys.exit(2)
     
     if len(args) == 1 :
-        vkMD.main(auth_dialog = 'yes')
+        asyncio.run(vkMD.main(auth_dialog = 'yes'))
     else :
         for arg in args:    
             if arg == '-h':
                 print('./main.py [-n] [-h]')
                 sys.exit()
             elif arg == '-n':
-                vkMD.main(auth_dialog = 'no')
+                asyncio.run(vkMD.main(auth_dialog = 'no'))
 
 
