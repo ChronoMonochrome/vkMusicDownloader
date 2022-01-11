@@ -66,7 +66,7 @@ class vkMusicDownloader():
     def downloadTracks(self, tracks):
         for index, track in enumerate(tracks, start = 1):
             fileMP3 = "{} - {}.mp3".format(track["artist"], track["title"])
-            fileMP3 = re.sub('/', '_', fileMP3)
+            fileMP3 = fileMP3.replace("/", "_").replace("*", "＊").replace("|", "।")
             try:
                 if os.path.isfile(fileMP3) :
                     print("{} Уже скачен: {}.".format(index, fileMP3))
