@@ -5,6 +5,7 @@ import re
 import os
 import sys
 import asyncio
+import requests
 import getopt
 import pickle
 from time import time
@@ -14,7 +15,7 @@ from vk_api import audio
 class vkMusicDownloader():
     CONFIG_DIR = "config"
     USERDATA_FILE = "{}/UserData.datab".format(CONFIG_DIR) #файл хранит логин, пароль и id
-    REQUEST_STATUS_CODE = 200 
+    REQUEST_STATUS_CODE = 200
     path = 'music/'
 
     def __init__(self):
@@ -81,7 +82,6 @@ class vkMusicDownloader():
         track = self.tracks[trackId]
         fileMP3 = "{} - {}.mp3".format(track["artist"], track["title"])
         fileMP3 = fileMP3.replace("/", "_").replace("*", "＊").replace("|", "।")
-        self.log("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
         proc = None
 
         try:
@@ -89,9 +89,17 @@ class vkMusicDownloader():
                 self.log("{} Уже скачен: {}.".format(trackId, fileMP3))
             else :
                 self.log("{} Скачивается: {}.".format(trackId, fileMP3))
+                coverUrl = ""
+                if "track_covers" in track:
+                    coverUrl = track["track_covers"][-1]
 
-                self.log("ffmpeg -i {} -c copy -map a \"{}\"".format(track['url'], fileMP3))
-                proc = await asyncio.create_subprocess_exec("ffmpeg", "-i", track['url'], "-c", "copy", "-map", "a", fileMP3)
+                if not coverUrl:
+                    self.log("{} Couldn't find a cover image for track: {}".format(trackId, fileMP3))
+                    cmd = ["ffmpeg", "-i", track['url'], "-c", "copy", "-map", "0:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
+                else:
+                    cmd = ["ffmpeg", "-i", track['url'], "-i", coverUrl, "-c", "copy", "-map", "0:0", "-map", "1:0", "-metadata", "artist=\"{}\"".format(track["artist"]), "-metadata", "title=\"{}\"".format(track["title"]), fileMP3]
+                self.log(" ".join(cmd))
+                proc = await asyncio.create_subprocess_exec(*cmd)
         except OSError:
             if not os.path.isfile(fileMP3) :
                 self.log("{} Не удалось скачать аудиозапись: {}".format(trackId, fileMP3))
